@@ -1,0 +1,31 @@
+@startuml компоненты приёмника в гейте телематики
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+Boundary(sh_location, Локация, $descr="Умный дом") {
+    System(smart_home, Комплекс устройств умного дома)
+}
+
+Enterprise_Boundary(company_services, "Компания «Тёплый дом»") {
+
+    Container_Ext(conf_services, "Сервисы сущностей", $descr="Предоставляют REST API для всех сущностей в системе")
+    Boundary(telematic_janitor, "Гейт телематики и команд управления", $descr="Оркестратор сервисов приёма телематики и отправки команд\n(kubernetes)") {
+
+        Container_Boundary(telematic_receiver, "Приёмник данных", $descr="Приёмник данных (пассивный или активный)") {
+            Component(protocol_receiver, "Приёмник данных по определенному протоколу", $techn="Множество экземпляров")
+            Component(conf_keeper, "Хранитель настроек устройств", "Компонента кэширования настроек устройств")
+        }
+    }
+    ContainerQueue_Ext(telematic_queue, "Шина входящей телематики", $techn="Kafka")
+    ContainerQueue_Ext(conf_queue, "Шина изменений настроек устройств", $techn="Kafka")
+}
+
+Rel(smart_home, protocol_receiver, "принимает данные из сети")
+Rel(protocol_receiver, telematic_queue, "передаёт данные в шину телематики")
+Rel(conf_queue, conf_keeper, "оповещает об изменениях настроек устройств")
+Rel(conf_keeper, conf_services, "получает актуальные настройки устройств")
+Rel(protocol_receiver, conf_keeper, "получает актуальные настройки устройств")
+
+
+@enduml

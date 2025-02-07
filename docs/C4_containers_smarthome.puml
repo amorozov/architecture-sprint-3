@@ -1,0 +1,24 @@
+@startuml устройства умного дома в локации
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+Boundary(sh_location, Локация, $descr="Умный дом") {
+    Container_Boundary(smart_home, Комплекс устройств умного дома) {
+        Container(sensor_ip, "Устройства с доступом в интернет", $descr="множество")
+        Container(sensor_local, "Устройства без доступа в интернет", $descr="множество")
+        Container(sensor_hub, "Хаб для устройств без интернет")
+    }
+}
+
+Enterprise_Boundary(company_services, "Компания «Тёплый дом»") {
+    System(telematic_janitor, "Гейт телематики и команд управления", $descr="Сервисы получения телематических данных и отправки управляющих команд")
+}
+
+Rel(sensor_local, sensor_hub, "отправляет данные на хаб")
+Rel(sensor_ip, telematic_janitor, "отправляет телематику на серверы")
+BiRel(sensor_hub, telematic_janitor, "отправляет телематику на серверы\nотправляет команды для устройств")
+Rel(sensor_hub, sensor_local, "отправляет команды на устройства")
+Rel(telematic_janitor, sensor_ip, "отправляет команды на устройства")
+
+@enduml

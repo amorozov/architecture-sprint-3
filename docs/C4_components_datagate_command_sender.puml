@@ -1,0 +1,29 @@
+@startuml компоненты отправителя команд в гейте телематики
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+Boundary(sh_location, Локация, $descr="Умный дом") {
+    System(smart_home, Комплекс устройств умного дома)
+}
+
+Enterprise_Boundary(company_services, "Компания «Тёплый дом»") {
+
+    Container_Ext(conf_services, "Сервисы сущностей", $descr="Предоставляют REST API для всех сущностей в системе")
+    Boundary(telematic_janitor, "Гейт телематики и команд управления", $descr="Оркестратор сервисов приёма телематики и отправки команд\n(kubernetes)") {
+
+        Container_Boundary(command_sender, "Отправитель команд", $descr="Отправитель команд") {
+            Component(protocol_sender, "Отправитель команд по определенному протоколу", $techn="Множество экземпляров")
+            Component(conf_keeper, "Хранитель настроек устройств", "Компонента кэширования настроек устройств")
+        }
+    }
+    ContainerQueue_Ext(command_queue, "Шина исходящих команд", $techn="Kafka")
+    ContainerQueue_Ext(conf_queue, "Шина изменений настроек устройств", $techn="Kafka")
+}
+
+Rel(protocol_sender, smart_home, "отправляет команды устройствам умного дома по определенному протоколу")
+Rel(command_queue, protocol_sender, "доставляет исходящие команды на отправку")
+Rel(conf_queue, conf_keeper, "оповещает об изменениях настроек устройств")
+Rel(conf_keeper, conf_services, "получает актуальные настройки устройств")
+Rel(protocol_sender, conf_keeper, "получает актуальные настройки устройств")
+@enduml

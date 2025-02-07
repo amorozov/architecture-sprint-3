@@ -1,0 +1,37 @@
+@startuml контекст
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!define ICONURL https://raw.githubusercontent.com/Roemer/plantuml-office/master/office2014
+!includeurl ICONURL/Users/user.puml
+!includeurl ICONURL/Users/mobile_user.puml
+
+Person(customer , Клиент , "Клиент Компании, имеющий одну или несколько локаций умного дома", $sprite="user> <$mobile_user")
+Person(integrator, Интегратор, "Партнёр Компании, проводящий установку, настройку и обслуживание компонентов умного дома в определенных локациях")
+Person(manufacturer, Производитель оборудования, "Представитель производителя оборудования для умного дома (OEM)")
+
+Boundary(sh_location, Локация, $type="Умный дом") {
+    System(smart_home, Комплекс устройств умного дома, "Получают различную информацию об окружающей среде, отправляют для обработки на серверы и предоставляют возможность управления оборудованием дома")
+}
+
+Enterprise_Boundary(company_services, "Компания «Тёплый дом»", $descr="Сервисы компании") {
+    System(customer_apps, Клиентские приложения, "Интерфейс контроля и управления умным домом", $type="Веб- и мобильные приложения")
+    System(backend_services, "Бэкенд-сервисы «Тёплого дома»", "Получение, хранение и обработка телематических данных, управление умным домом, построение отчётов", $type="набор сервисов")
+    System(integrator_portal, "АРМ интегратора", $type="Веб-приложение")
+}
+
+System_Ext(message_transports, Системы доставки сообщений, $type="E-Mail, SMS, ТГ...")
+System_Ext(partner_analitical_systems, Партнёрские аналитические системы)
+
+Rel(customer, customer_apps, "Использует приложения для контроля и управления умным домом")
+Rel(smart_home, backend_services, "Отправляют телематические данные умного дома на серверы Комании")
+Rel(backend_services, smart_home, "Отправляют команды управления умным домом")
+Rel(customer, sh_location, "Владеет локацией и пользуется устройствами умного дома")
+Rel(integrator, smart_home, "Устанавливает, настраивает и обслуживает устройства умного дома")
+BiRel(customer_apps, backend_services, "Получает данные для визуализации, осуществляет ручное управление")
+Rel(message_transports, customer, "Доставляет оповещения и отчёты")
+Rel(backend_services, message_transports, "Отправляет Клиенту оповещения через подходящие каналы связи, отправляет отчёты пользователям по e-mail")
+Rel(message_transports, integrator, "Доставляет отчёты по e-mail")
+Rel(message_transports, manufacturer, "Доставляет отчёты по e-mail")
+Rel(integrator, integrator_portal, "Использует АРМ интегратора для осуществления проф.деятельности")
+Rel(integrator_portal, backend_services, "Использует")
+Rel(backend_services, partner_analitical_systems, "Выгружает данные")
+@enduml

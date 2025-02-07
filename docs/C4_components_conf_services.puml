@@ -1,0 +1,30 @@
+@startuml компоненты контроллеров сущностей
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+Enterprise_Boundary(company_services, "Компания «Тёплый дом»") {
+    Container_Ext(public_apigate, Внешний API-гейт)
+    Container_Boundary(conf_services, "Контроллеры сущностей", $descr="Предоставляют REST API для всех сущностей в системе") {
+        Component(profiles, "Контроллер профилей пользователей", $techn="OpenAPI")
+        ComponentDb_Ext(profiles_db, "БД профилей пользователй", $techn="Postgresql")
+        Component(locations, "Контроллен локаций", $techn="OpenAPI")
+        ComponentDb_Ext(locations_db, "БД локаций", $techn="Postgresql")
+        Component(iot_devices, "Контроллер устройств умного дома", $descr="Управляет списками подключенных устройств и их конфигурации", $techn="OpenAPI")
+        ComponentDb_Ext(iot_devices_db, "БД устройств умного дома", $techn="Postgresql")
+    }
+    ContainerQueue_Ext(conf_queue, "Шина изменений настроек", $techn="Kafka")
+    Container(operational_processing, "Оперативная обработка", $descr="Оперативный анализ и формирование команд управления")
+}
+
+Rel(public_apigate, profiles, "к операциям с профилями пользователей")
+Rel(public_apigate, locations, "к операциям с локациями")
+Rel(public_apigate, iot_devices, "к операциям с устройствами умного дома")
+Rel(iot_devices, conf_queue, "отправляет нотификации с изменениями настроек")
+Rel(operational_processing, iot_devices, "получает настройки устройств умного дома")
+Rel_D(profiles, profiles_db, "хранит данные профилей")
+Rel_D(locations, locations_db, "хранит данные локаций")
+Rel_D(iot_devices, iot_devices_db, "хранит настройки устройств умного дома")
+
+
+@enduml

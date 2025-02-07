@@ -1,0 +1,34 @@
+@startuml контейнеры гейта телематики
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+Boundary(sh_location, Локация, $descr="Умный дом") {
+    System(smart_home, Комплекс устройств умного дома)
+}
+
+Enterprise_Boundary(company_services, "Компания «Тёплый дом»") {
+    Container_Boundary(telematic_janitor, "Гейт телематики и команд управления", $descr="Оркестратор сервисов приёма телематики и отправки команд\n(kubernetes)") {
+        Container(proto_receiver, "Приёмники данных", $descr="Пассивные приёмники данных", $techn="Множество экземпляров")
+        Container(proto_fetcher, "Получатели данных", $descr="Активные получатели данных", $techn="Множество экземпляров")
+        Container(proto_command_sender, "Отправители команд", $descr="Отправляют команды управления на устройства", $techn="Множество экземпляров")
+    }
+    ContainerQueue_Ext(telematic_queue, "Шина входящей телематики", $techn="Kafka")
+    ContainerQueue_Ext(command_queue, "Шина исходящих команд", $techn="Kafka")
+    ContainerQueue_Ext(conf_queue, "Шина изменений конфигурации", $techn="Kafka")
+    Container_Ext(conf_services, "Сервисы сущностей", $descr="Предоставляют REST API для всех сущностей в системе", $techn="OpenAPI")
+}
+
+Rel(smart_home, proto_receiver, "отправляет данные на приёмник")
+Rel(smart_home, proto_fetcher, "предоставляет данные получателю")
+Rel(proto_command_sender, smart_home, "отправляет команды устройствам в локации")
+Rel(proto_receiver, telematic_queue, "отправляет телематические данные на обработку")
+Rel(proto_fetcher, telematic_queue, "отправляет телематические данные на обработку")
+Rel_U(command_queue, proto_command_sender, "доставляет команды для отправки устройствам в локации")
+Rel_U(conf_queue, proto_command_sender, "доставляет изменения настроек устройств")
+Rel_U(conf_queue, proto_receiver, "доставляет изменения настроек устройств")
+Rel_U(conf_queue, proto_fetcher, "доставляет изменения настроек устройств")
+Rel_D(proto_receiver, conf_services, "получает настройки устройств")
+Rel_D(proto_fetcher, conf_services, "получает настройки устройств")
+Rel_D(proto_command_sender, conf_services, "получает настройки устройств")
+@enduml

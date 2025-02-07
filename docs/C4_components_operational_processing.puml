@@ -1,0 +1,38 @@
+@startuml компоненты сервиса оперативной обработки
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+Enterprise_Boundary(company_services, "Компания «Тёплый дом»") {
+    Container_Ext(public_apigate, Внешний API-гейт)
+    Container_Ext(internal_apigate, Внутренний API-гейт)
+    Container_Ext(conf_services, "Сервисы сущностей", $descr="Предоставляют REST API для всех сущностей в системе")
+    ContainerQueue_Ext(conf_queue, "Шина изменений настроек устройств", $techn="Kafka")
+    ContainerQueue_Ext(telematic_queue, "Шина входящей телематики", $techn="Kafka")
+    Container_Boundary(operational_processing, "Оперативная обработка", $descr="оперативный анализ и формирование команд управления") {
+        Component(telematic_queue_consumer, "Получатель телематики из шины", $descr="получает необработанные телематические данные", $techn="Kafka consumer")
+        Component(conf_keeper, "Хранитель настроек устройств", "Компонента кэширования настроек устройств")
+        Component(telematic_transformer, "Преобразователь данных", $descr="преобразовывает данные согласно правилам из настроек устройств данной локации")
+        Component(state_analyzer, "Анализатор состояния", $descr="вычисляет и анализирует состояние локации по правилам из настроек устройств")
+        Component(state_saver, "Сохранение обработанных данных и вычисленных состояний")
+    }
+    ContainerQueue_Ext(command_queue, "Шина исходящих команд", $techn="Kafka")
+    ContainerDb_Ext(telematic_storage, "БД телематики и состояний", $descr="хранение телематических данных и вычисленных состояний умного дома")
+}
+
+System_Ext(message_transports, Системы доставки сообщений, $type="E-Mail, SMS, ТГ...")
+
+Rel(public_apigate, state_analyzer, "получает актуальное состояние устройства")
+Rel(internal_apigate, state_analyzer, "получает актуальное состояние устройства")
+Rel(conf_queue, conf_keeper, "оповещает об изменениях настроек устройств")
+Rel(conf_keeper, conf_services, "получает актуальные настройки устройств")
+Rel(telematic_queue, telematic_queue_consumer, "передаёт необработанные телематические данные")
+Rel(telematic_queue_consumer, telematic_transformer, "передаёт данные на обработку")
+Rel(telematic_transformer, conf_keeper, "получает актуальные настройки устройств")
+Rel(telematic_transformer, state_analyzer, "передаёт обработанные данные для обновления состояния")
+Rel(telematic_queue_consumer, state_analyzer, "передаёт необработанные данные для обновления состояния")
+Rel(state_analyzer, state_saver, "передаёт обработанные данные для сохранения")
+Rel(state_analyzer, command_queue, "передаёт сформированные команды для управления устройствами")
+Rel(state_analyzer, message_transports, "передаёт сформированные оповещения пользователям")
+Rel(state_saver, telematic_storage, "сохраняет обработанные данные и состояния")
+@enduml
