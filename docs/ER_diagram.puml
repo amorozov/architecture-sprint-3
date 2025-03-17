@@ -1,0 +1,149 @@
+@startuml ER-диаграмма
+
+hide empty members
+
+entity Customer {
+    *id: UUID <<generated>>
+    --
+    *name: varchar
+    *phone: varchar
+    *email: varchar
+    *address: varchar
+}
+
+entity Integrator {
+    id: UUID <<generated>>
+    --
+    *name: varchar
+    *phone: varchar
+    *email: varchar
+
+}
+
+entity Location {
+    *location_id: UUID <<generated>>
+    --
+    *customer_id: UUID <<FK>>
+    *integrator_id: UUID <<FK>>
+    *name: varchar
+    *address: varchar
+}
+
+enum IOTDeviceType {
+    TEMPERATURE_SENSOR
+    WARMING_SYSTEM
+}
+
+enum IOTDeviceProtocol {
+    IOT_PROTOCOL1 /' a dummy protocol '/
+}
+
+entity IOTDevice {
+    *id: UUID <<generated>>
+    --
+    location_id: UUID[0..1] <<FK>> /' devices in a warehouse don't have location_id set '/ 
+    *type: IOTDeviceType
+    *vendor: varchar
+    *model: varchar
+    *proto: IOTDeviceProtocol
+    hardware_id: varchar[1..2]
+}
+
+entity TelemetryPacket {
+    *id: UUID7 <<generated>>
+    --
+    iot_device_id: UUID <<FK>>
+    generated: DateTime
+    received: DateTime
+    payload: jsonb /' C'mon, it's 2025 outhere! '/
+}
+
+enum IOTDeviceCommandStatus {
+    GENERATED
+    SENT
+    DELIVERED
+    CANCELLED
+    FAILED
+}
+
+entity IOTDeviceCommand {
+    *id: UUID7 <<generated>>
+    --
+    iot_device_id: UUID <<FK>>
+    location_alarm_state_id: UUID[0..1] <<FK>>
+    generated: DateTime
+    sent: DateTime[0..1]
+    delivered: DateTime[0..1]
+    payload: byte[1..*]
+    status: IOTDeviceCommandStatus
+    fail_message: String[0..1]
+}
+
+enum AlarmType {
+    ALARM1      /' a dummy alarm type and its end '/
+    ALARM1_END 
+}
+
+enum NotificationTransportType {
+    SMS
+    EMAIL
+    TG
+}
+
+entity CustomerNotificationTemplate {
+    id: UUID7
+    --
+    customer_id: UUID[0..1] <<FK>>
+    summary_template: varchar
+    description_template: varchar
+    transport_type: NotificationTransportType
+    transport_template_params: jsonb
+}
+
+entity CustomerNotification {
+    id: UUID7
+    --
+    customer_id: UUID <<FK>>
+    location_alarm_state_id: UUID <<FK>>
+    summary: varchar
+    description: text
+    'type: AlarmType
+    generated: DateTime
+    sent: DateTime[0..1]
+    delivered: DateTime[0..1]
+    transport_type: NotificationTransportType
+    transport_params: jsonb
+}
+
+entity LocationAlarmState {
+    id: UUID7 <<generated>>
+    --
+    start_packet_id: UUID <<FK>>
+    start_confirmed_packet_id: UUID[0..1] <<FK>>    
+    stop_packet_id: UUID[0..1] <<FK>>
+    stop_confirmed_packet_id: UUID[0..1] <<FK>>
+    type: AlarmType
+    'location_id: UUID
+    'mitigation_commands: IOTDeviceCommand[*]
+    'notifications: CustomerNotification[*]
+}
+
+Customer ||--o{ Location
+Integrator ||--o{ Location
+Location ||--o{ IOTDevice
+IOTDevice ||--o{ TelemetryPacket
+IOTDeviceCommand }o--|| IOTDevice
+TelemetryPacket ||--o| LocationAlarmState
+LocationAlarmState |o--o{ IOTDeviceCommand
+LocationAlarmState ||--o{ CustomerNotification
+Customer ||--o{ CustomerNotification
+Customer |o--o{ CustomerNotificationTemplate /' есть шаблоны, не привязанные ни к одному пользователю '/
+
+CustomerNotification ..> NotificationTransportType
+LocationAlarmState ..> AlarmType
+CustomerNotificationTemplate ..> AlarmType
+IOTDeviceCommand ..> IOTDeviceCommandStatus
+IOTDevice ..> IOTDeviceType
+IOTDevice ..> IOTDeviceProtocol
+
+@enduml

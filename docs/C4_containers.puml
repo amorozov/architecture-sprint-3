@@ -1,0 +1,82 @@
+@startuml контейнеры бэкенда
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!define ICONURL https://raw.githubusercontent.com/Roemer/plantuml-office/master/office2014
+!includeurl ICONURL/Users/user.puml
+!includeurl ICONURL/Users/mobile_user.puml
+
+LAYOUT_TOP_DOWN()
+
+Person(customer , Клиент , "Клиент Компании, имеющий одну или несколько локаций умного дома", $sprite="user> <$mobile_user")
+Person(integrator, Интегратор, "Партнёр Компании, проводящий установку, настройку и обслуживание компонентов умного дома в определенных локациях")
+Person(manufacturer, Производитель оборудования, "Представитель производителя оборудования для умного дома (OEM)")
+
+Boundary(sh_location, Локация, $descr="Умный дом") {
+    System(smart_home, Устройства умного дома, "Получают различную информацию об окружающей среде, отправляют для обработки на серверы и предоставляют возможность управления оборудованием дома")
+}
+
+Enterprise_Boundary(company_services, "Компания «Тёплый дом»", $descr="Контур компании") {
+    Container(customer_apps, Клиентские приложения, "Интерфейс контроля и управления умным домом", $techn="Веб- и мобильные приложения")
+    Container(integrator_portal, "АРМ интегратора", $techn="Веб-приложение")
+    Container_Ext(public_apigate, Внешний API-гейт)
+    Container_Boundary(iam_services, "IAM") {
+        Container_Ext(iam_service, "Сервис IAM", $techn="Keycloak")
+        ContainerDb_Ext(iam_service_db, "БД сервиса IAM", $techn="Postgresql")
+    }
+    System(telematic_janitor, "Гейты телематики и команд управления", $descr="Получение телематических данных и отправка управляющих команд", $type="Оркестратор и множество экземпляров")
+    ContainerQueue_Ext(telematic_queue, "Шины входящей телематики и исходящих команд", $techn="Kafka")
+    ContainerQueue_Ext(conf_queue, "Шина изменений настроек устройств", $techn="Kafka")
+    Container(conf_services, "Сервисы сущностей", $descr="Предоставляют REST API для всех сущностей в системе", $techn="OpenAPI")
+    ContainerDb_Ext(conf_db, "Базы данных сущностей", $descr="Хранилища конфигураций сущностей", $techn="Postgresql")
+    Container(operational_processing, "Оперативная обработка", $descr="Оперативный анализ и формирование команд управления")
+    ContainerDb_Ext(telematic_storage, "БД телематики и состояний", $descr="хранение телематических данных и вычисленных состояний умного дома")
+    Container(analitical_block, "Аналитический блок", $descr="Построение отчётов и расчёт аналитики")
+    Container_Ext(monitoring_logging, "Подсистема мониторинга и ведения журналов")
+    Container_Ext(internal_apigate, Внутренний API-гейт)
+    Container(support_portal, "АРМ тех.поддержки", $techn="Веб-приложение")
+    Person(supporter, "Инженер тех.поддержки")
+}
+
+System_Ext(message_transports, Системы доставки сообщений, $type="E-Mail, SMS, ТГ...")
+System_Ext(partner_analitical_systems, Партнёрские аналитические системы)
+
+Rel_D(customer, customer_apps, "Использует приложения для контроля и управления умным домом")
+BiRel(customer_apps, public_apigate, "Получает данные для визуализации, осуществляет ручное управление")
+Rel_D(integrator, integrator_portal, "Использует для осуществления проф.деятельности")
+Rel_D(integrator_portal, public_apigate, "Использует")
+Rel(smart_home, telematic_janitor, "Отправляют телематические данные умного дома на серверы Комании")
+Rel(telematic_janitor, smart_home, "Отправляют команды управления умным домом")
+BiRel(telematic_janitor, telematic_queue, "Телематика передаётся внутрь системы,\nкоманды управления наружу")
+BiRel(telematic_queue, operational_processing, "Телематика передаётся внутрь системы,\nкоманды управления наружу")
+BiRel(public_apigate, operational_processing, "Получает данные для визуализации, осуществляет ручное управление")
+Rel_D(public_apigate, iam_service, "Предоставляет методы аутентификации и управления учётными записями")
+Rel_D(iam_service, iam_service_db, "Использует")
+Rel_D(public_apigate, conf_services, "Получает и сохраняет конфигурации сущностей")
+Rel(conf_services, conf_db, "Получает и сохраняет конфигурации сущностей")
+Rel(conf_services, conf_queue, "Отправляет оповещения об изменении настроек устройств")
+
+Rel_U(operational_processing, conf_services, "Получает настроек устройств")
+Rel(operational_processing, telematic_storage, "Сохраняет вычисленные состояния и обработанную телематику")
+Rel(conf_queue, operational_processing, "Доставляет оповещения об изменении настроек устройств")
+Rel(conf_queue, telematic_janitor, "Доставляет оповещения об изменении настроек устройств")
+Rel(telematic_queue, telematic_storage, "Сохраняет необработанные телематические данные")
+Rel(operational_processing, message_transports, "Отправляет Клиенту оповещения через подходящие каналы")
+Rel_U(message_transports, customer, "Доставляет оповещения и отчёты")
+Rel(telematic_storage, analitical_block, "Доставляет данные для аналитики")
+Rel(analitical_block, message_transports, "Отправляет потребителям отчёты по e-mail")
+Rel_U(message_transports, integrator, "Доставляет отчёты по e-mail")
+Rel_U(message_transports, manufacturer, "Доставляет отчёты по e-mail")
+Rel(analitical_block, partner_analitical_systems, "Выгружает данные")
+Rel_U(supporter, support_portal, "Использует для осуществления проф.деятельности")
+Rel_U(supporter, monitoring_logging, "Использует для осуществления проф.деятельности")
+Rel_U(support_portal, internal_apigate, "Использует")
+Rel_U(internal_apigate, operational_processing, "Получает оперативные данные")
+Rel_U(internal_apigate, analitical_block, "Получает отчёты")
+' Rel(public_apigate, monitoring_logging, "Отправляет\nметрики и журналы")
+' Rel(telematic_janitor, monitoring_logging, "Отправляет метрики и журналы")
+' Rel(telematic_queue, monitoring_logging, "Отправляет метрики и журналы")
+' Rel(conf_services, monitoring_logging, "Отправляет метрики и журналы")
+' Rel(operational_processing, monitoring_logging, "Отправляет метрики и журналы")
+' Rel(analitical_block, monitoring_logging, "Отправляет метрики и журналы")
+' Rel(telematic_storage, monitoring_logging, "Отправляет метрики и журналы")
+' Rel(support_portal, monitoring_logging, "Отправляет метрики и журналы")
+@enduml
