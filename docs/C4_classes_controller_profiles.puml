@@ -1,0 +1,308 @@
+@startuml классы контроллера профилей
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!define datatype(x) class x << (D,#FF7700) DataType>>
+hide empty members
+
+Boundary(controller_boundary, "Граница контроллера") {
+
+    enum ProfileFilterStringTypeDto {
+        NAME;
+        PHONE;
+        EMAIL;
+        ADDRESS;
+    }
+
+    enum ProfileFilterStringMatchDto {
+        EQ;
+        SUBSTRING;
+        START;
+    }
+
+
+    datatype(ProfileFilterStringElementsDto) {
+        +fields: set<ProfileFilterStringType>;
+        +match: ProfileFilterStringMatch;
+        +mask: String;
+    }
+
+    enum ProfileFilterDateTypeDto {
+        CREATED;
+        SUSPENDED;
+        TERMINATED;
+    }
+
+    enum ProfileFilterDateMatchDto {
+        BEFORE;
+        AFTER;
+        BETWEEN;
+    }
+
+    datatype(ProfileFilterDateElementDto) {
+        +field: ProfileFilterDateTypeDto;
+        +match: ProfileFilterDateMatchDto;
+        +bound1: DateTime;
+        +bound2: DateTime [0..1];
+    }
+
+    enum ProfileStatusDto {
+        ACTIVE;
+        SUSPENDED;
+        TERMINATED;
+    }
+
+    datatype(ProfileFilterDto) {
+        +stringFields: set<ProfileFilterStringElementsDto> [0..1];
+        +dateFields: set<ProfileFilterDateElementDto> [0..1];
+        +status: ProfileStatusDto [0..1];
+    }
+
+    datatype(ProfileDto) {
+        +id: UUID;
+        +name: String;
+        +phone: String;
+        +email: String;
+        +address: String;
+        +status: ProfileStatusDto;
+        +created: DateTime;
+        +suspended: DateTime[0..1];
+        +terminated: DateTime[0..1];
+    }
+
+    datatype(CreateProfileDto) {
+        +name: String;
+        +phone: String;
+        +email: String;
+        +address: String;
+    }
+
+    datatype(UpdateProfileDto) {
+        +id: UUID;
+        +name: String[0..1];
+        +phone: String[0..1];
+        +email: String[0..1];
+        +address: String[0..1];
+    }
+
+    datatype(ListProfilesResponseDto) {
+        +profiles: ProfileDto[*];
+        +nextPage: String[0..1];
+    }
+
+    datatype(UserDto) {
+        +id: UUID;
+        +nick: String;
+    }
+
+    datatype(ProfileHistoryElementDto) {
+        +profile: ProfileDto;
+        +who: UserDto[0..1];
+        +when: DateTime;
+    }
+
+    interface ProfilesController {
+        +listProfiles(pagesize: Integer[0..1] = 25, filter: ProfileFilterDto[0..1]): ListProfilesResponseDto;
+        +listProfilesNextPage(nextPage: String): ListProfilesResponseDto;
+        +listProfilesById(ids: set<UUID>): ProfileDto[*];
+        +getProfile(id: UUID): ProfileDto;
+        +getProfileHistory(id: UUID, from: DateTime, to: DateTime[0..1]): ProfileHistoryElementDto[*];
+        +createProfile(profile: CreateProfileDto): ProfileDto;
+        +updateProfile(profile: UpdateProfileDto): ProfileDto;
+        +suspendProfile(id: UUID);
+        +resumeProfile(id: UUID);
+        +terminateProfile(id: UUID);
+
+    }
+
+    class DtoAdapter {
+        +{static} fromDto(value: ProfileFilterDto): ProfileFilter;
+        +{static} toDto(value: ProfileFilter): ProfileFilterDto;
+        +{static} toDto(value: ListProfilesResponse): ListProfilesResponseDto;
+        +{static} toDto(value: Profile): ProfileDto;
+        +{static} fromDto(value: CreateProfileDto): CreateProfile;
+        +{static} fromDto(value: UpdateProfileDto): UpdateProfile;
+        +{static} fromDto(value: ProfileStatusDto): ProfileStatus;
+        +{static} toDto(value: ProfileStatus): ProfileStatusDto;
+        +{static} fromDto(value: ProfileFilterDateElementDto): ProfileFilterDateElement;
+        +{static} fromDto(value: ProfileFilterStringElementsDto): ProfileFilterStringElements;
+        +{static} fromDto(value: ProfileFilterDateMatchDto): ProfileFilterDateMatch;
+        +{static} fromDto(value: ProfileFilterDateTypeDto): ProfileFilterDateType;
+        +{static} fromDto(value: ProfileFilterStringTypeDto): ProfileFilterStringType;
+        +{static} fromDto(value: ProfileFilterStringMatchDto): ProfileFilterStringMatch;
+        +{static} toDto(value: ProfileHistoryElement): ProfileHistoryElement;
+        +{static} toDto(value: User): UserDto;
+    }
+
+    class ProfilesControllerImpl {
+        -service: ProfilesService;
+    }
+    ProfilesControllerImpl ..|> ProfilesController
+    ProfilesControllerImpl --> DtoAdapter
+
+    ProfileFilterStringElementsDto --o ProfileFilterStringTypeDto
+    ProfileFilterStringElementsDto --o ProfileFilterStringMatchDto
+    ProfileFilterDateElementDto --o ProfileFilterDateTypeDto
+    ProfileFilterDateElementDto --o ProfileFilterDateMatchDto
+    ProfileFilterDto --o ProfileFilterStringElementsDto
+    ProfileFilterDto --o ProfileFilterDateElementDto
+    ProfileFilterDto --o ProfileStatusDto
+    ProfileDto --o ProfileStatusDto
+    ListProfilesResponseDto --o ProfileDto
+    ProfileHistoryElementDto --o UserDto
+    ProfileHistoryElementDto --o ProfileDto
+    ProfilesController ..> ProfileDto
+    ProfilesController ..> CreateProfileDto
+    ProfilesController ..> UpdateProfileDto
+
+}
+
+Boundary(service_boundary, "Граница сервиса") {
+
+    enum ProfileFilterStringType {
+        NAME;
+        PHONE;
+        EMAIL;
+        ADDRESS;
+    }
+
+    enum ProfileFilterStringMatch {
+        EQ;
+        SUBSTRING;
+        START;
+    }
+
+
+    datatype(ProfileFilterStringElements) {
+        +fields: set<ProfileFilterStringType>;
+        +match: ProfileFilterStringMatch;
+        +mask: String;
+    }
+
+    enum ProfileFilterDateType {
+        CREATED;
+        SUSPENDED;
+        TERMINATED;
+    }
+
+    enum ProfileFilterDateMatch {
+        BEFORE;
+        AFTER;
+        BETWEEN;
+    }
+
+    datatype(ProfileFilterDateElement) {
+        +field: ProfileFilterDateType;
+        +match: ProfileFilterDateMatch;
+        +bound1: DateTime;
+        +bound2: DateTime [0..1];
+    }
+
+    enum ProfileStatus {
+        ACTIVE;
+        SUSPENDED;
+        TERMINATED;
+    }
+
+    datatype(ProfileFilter) {
+        +stringFields: set<ProfileFilterStringElements> [0..1];
+        +dateFields: set<ProfileFilterDateElement> [0..1];
+        +status: ProfileStatus [0..1];
+    }
+
+    datatype(Profile) {
+        +id: UUID;
+        +name: String;
+        +phone: String;
+        +email: String;
+        +address: String;
+        +status: ProfileStatus;
+        +created: DateTime;
+        +suspended: DateTime[0..1];
+        +terminated: DateTime[0..1];
+    }
+
+    datatype(CreateProfile) {
+        +name: String;
+        +phone: String;
+        +email: String;
+        +address: String;
+    }
+
+    datatype(UpdateProfile) {
+        +id: UUID;
+        +name: String[0..1];
+        +phone: String[0..1];
+        +email: String[0..1];
+        +address: String[0..1];
+        +status: ProfileStatus[0..1];
+    }
+
+    datatype(ListProfilesResponse) {
+        +profiles: ProfileDto[*];
+        +nextPage: String[0..1];
+    }
+
+    datatype(User) {
+        id: UUID;
+        nick: String;
+        roles: set<UUID>;
+    }
+
+    datatype(ProfileHistoryElement) {
+        +profile: Profile;
+        +who: User[0..1];
+        +when: DateTime;
+    }
+
+    interface ProfilesService {
+        +listProfiles(currentUser: User, page: int, filter: ProfileFilter[0..1], lastseen: Profile[0..1]): ListProfilesResponse;
+        +listProfilesById(currentUser: User, ids: set<UUID>): Profile[*];
+        +getProfile(currentUser: User, id: UUID): Profile;
+        +getProfileHistory(currentUser: User, id: UUID, from: DateTime, to: DateTime[0..1]): ProfileHistoryElement[*];
+        +createProfile(currentUser: User, profile: CreateProfile): Profile;
+        +updateProfile(currentUser: User, profile: UpdateProfile): Profile;
+    }
+
+    ProfilesControllerImpl --> ProfilesService
+
+    class ProfilesServiceImpl {
+        - repository: ProfilesRepository;
+    }
+
+    ProfilesServiceImpl ..|> ProfilesService
+
+    ProfileFilterStringElements --o ProfileFilterStringType
+    ProfileFilterStringElements --o ProfileFilterStringMatch
+    ProfileFilterDateElement --o ProfileFilterDateType
+    ProfileFilterDateElement --o ProfileFilterDateMatch
+    ProfileFilter --o ProfileFilterStringElements
+    ProfileFilter --o ProfileFilterDateElement
+    ProfileFilter --o ProfileStatus
+    Profile --o ProfileStatus
+    ListProfilesResponse --o Profile
+    ProfileHistoryElement --o User
+    ProfileHistoryElement --o Profile
+    ProfilesService ..> Profile
+    ProfilesService ..> CreateProfile
+    ProfilesService ..> UpdateProfile
+
+}
+
+Boundary(repository_boundary, "Граница репозитория") {
+    interface ProfilesRepository {
+        +listProfiles(currentUserId: UUID, page: int, filter: ProfileFilter[0..1], lastseen: Profile[0..1]): ListProfilesResponse;
+        +listProfilesById(currentUserId: UUID, ids: set<UUID>): Profile[*];
+        +getProfile(currentUserId: UUID, id: UUID): Profile;
+        +getProfileHistory(currentUserId: UUID, id: UUID, from: DateTime, to: DateTime[0..1]): ProfileHistoryElement[*];
+        +createProfile(currentUserId: UUID, profile: CreateProfile): Profile;
+        +updateProfile(currentUserId: UUID, profile: UpdateProfile): Profile;
+    }
+    class ProfilesRepositoryImpl {
+
+    }
+
+    ProfilesRepositoryImpl ..|> ProfilesRepository
+    ProfilesServiceImpl --> ProfilesRepository
+}
+
+@enduml
